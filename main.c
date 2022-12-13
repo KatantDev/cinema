@@ -4,17 +4,16 @@
 // Считываем данные о фильмах из файла.
 void get_films_from_file(const char *filename) {
     FILE *films_txt = fopen(filename, "r");
+    if (films_txt == NULL) {
+        printf("Ошибка: отсутствует файл с фильмами.\n");
+        return;
+    }
 
     char title[96];
     int year;
     char countries[64];
     char genres[64];
     float rating;
-
-    if (films_txt == NULL) {
-        printf("Ошибка: отсутствует файл с фильмами.\n");
-        return;
-    }
 
     while (!feof(films_txt)) {
         fgets(title, sizeof(title), films_txt);
