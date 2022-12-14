@@ -24,7 +24,7 @@ jobs:
       with:
         python-version: '3.x'
         cache: 'pip'
-    - run: pip install numpy
+    - run: pip install -r requirements.txt
 
     - name: Test python3
       run: python3 --version
