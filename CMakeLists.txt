@@ -3,10 +3,10 @@ project(cinema C)
 
 set(CMAKE_C_STANDARD 99)
 
-set (CMAKE_FIND_FRAMEWORK NEVER)
 find_package(Python3)
 enable_testing()
 
+configure_file(films.txt films.txt COPYONLY)
 add_executable(cinema main.c)
 
 message("${PYTHON_FOUND}")

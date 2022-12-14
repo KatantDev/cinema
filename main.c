@@ -91,7 +91,7 @@ void print_circle(Films* films) {
 }
 
 int main() {
-    Films *films = get_films_from_file("../films.txt");
+    Films *films = get_films_from_file("films.txt");
     if (films != NULL) {
         print_circle(films);
     }
