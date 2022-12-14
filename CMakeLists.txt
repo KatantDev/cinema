@@ -3,7 +3,8 @@ project(cinema C)
 
 set(CMAKE_C_STANDARD 99)
 
-include(FindPythonInterp)
+set (CMAKE_FIND_FRAMEWORK NEVER)
+find_package(Python3)
 enable_testing()
 
 add_executable(cinema main.c)
