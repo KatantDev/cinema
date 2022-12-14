@@ -23,6 +23,8 @@ jobs:
     - uses: actions/setup-python@v4
       with:
         python-version: '3.x'
+        cache: 'pip'
+    - run: pip install numpy
 
     - name: Test python3
       run: python3 --version
