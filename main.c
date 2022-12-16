@@ -102,7 +102,7 @@ void print_circle(Films* films) {
 }
 
 void print_gigachad() {
-  printf("╔══════════════════════════════╗\n");
+  printf("╔═══════════════════════════════════╗\n");
   printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠛⠛⠛⠋⠉⠈⠉⠉⠉⠉⠛⠻⢿⣿⣿⣿⣿⣿⣿⣿║\n");
   printf("║⣿⣿⣿⣿⣿⡿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣿║\n");
   printf("║⣿⣿⣿⣿⡏⣀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿║\n");
@@ -126,14 +126,136 @@ void print_gigachad() {
   printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠁⠀⠀⠹⣿⠃⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
   printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⢐⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
   printf("║⣿⣿⣿⣿⠿⠛⠉⠉⠁⠀⢻⣿⡇⠀⠀⠀⠀⠀⠀⢀⠈⣿⣿⡿⠉⠛⠛⠛⠉⠉║\n");
-  printf("║⣿⡿⠋⠁⠀⠀⢀⣀⣠⡴⣸⣿⣇⡄⠀⠀⠀⠀⢀⡿⠄⠙⠛⠀⣀⣠⣤⣤⠄ ║\n");
-  printf("╚══════════════════════════════╝\n");
+  printf("║⣿⡿⠋⠁⠀⠀⢀⣀⣠⡴⣸⣿⣇⡄⠀⠀⠀⠀⢀⡿⠄⠙⠛⠀⣀⣠⣤⣤⠄⠄║\n");
+  printf("╚═══════════════════════════════════╝\n");
+}
+
+User *get_user() {
+    FILE *users_txt = fopen("users.txt", "r");
+    User *user = (User*)malloc(sizeof(User));
+    char user_input[24];
+
+    regex_t regex;
+    if (regcomp(&regex, "^[[:alpha:][:digit:]]{3,20}$", REG_EXTENDED)) {
+        fprintf(stderr, "Не удалось скомпилировать regex-выражение.\n");
+        exit(1);
+    }
+
+    while (1) {
+        printf("Для входа или регистрации введите свой логин (от 3 до 20 символов) >> ");
+        scanf("%s", user_input);
+
+        if (regexec(&regex, user_input, 0, NULL, 0) == REG_NOMATCH) {
+            printf("Логин должен состоять из латинских букв и цифр. И его длина должна быть в диапазоне 3-20 символов.\n");
+            continue;
+        }
+
+        while (fgets(user->login, sizeof(user->login), users_txt)) {
+            fgets(user->password, sizeof(user->password), users_txt);
+            fgets(user->card, sizeof(user->card), users_txt);
+            fscanf(users_txt, "%d\n", &user->is_admin);
+
+            strtok(user->login, "\n");
+            strtok(user->password, "\n");
+            strtok(user->card, "\n");
+
+            if (strcmp(user->login, user_input) == 0) {
+                free(user_input);
+                fclose(users_txt);
+                return user;
+            }
+        }
+        free(user);
+        user = (User*)malloc(sizeof(User));
+        strcpy(user->login, user_input);
+        return user;
+    }
+}
+
+char auth(User* user) {
+    char *password = (char*)calloc(20, sizeof(password));
+    printf("Вход в аккаунт %s.\nВведите пароль >> ", user->login);
+    scanf("%s", password);
+    if (strcmp(user->password, password) == 0) {
+        return 1;
+    }
+    return 0;
+}
+
+void save_user(User *user) {
+    FILE *users_txt = fopen("users.txt", "a");
+    fprintf(users_txt, "%s\n", user->login);
+    fprintf(users_txt, "%s\n", user->password);
+    fprintf(users_txt, "%s\n", user->card);
+    fprintf(users_txt, "%d\n", user->is_admin);
+    fclose(users_txt);
+}
+
+void sign_up(User* user) {
+    regex_t regex;
+    if (regcomp(&regex, "^[[:digit:]]{16}$", REG_EXTENDED)) {
+        fprintf(stderr, "Не удалось скомпилировать regex-выражение.\n");
+        exit(1);
+    }
+
+    printf("Регистрация аккаунта с логином %s.\n", user->login);
+    while (1) {
+        printf("Введите пароль для аккаунта (от 6 до 20 символов) >> ");
+        scanf("%s", user->password);
+        int has_lowercase = 0, has_uppercase = 0, has_number = 0;
+        for (int i = 0; i < strlen(user->password); i++) {
+            if (islower(user->password[i])) has_lowercase++;
+            if (isupper(user->password[i])) has_uppercase++;
+            if (isdigit(user->password[i])) has_number++;
+        }
+        if (has_lowercase && has_uppercase && has_number && strlen(user->password) > 6) break;
+        else
+            printf("Пароль должен содержать хотя бы одну латинскую букву в верхнем и нижнем регистре. "
+                   "И его длина должна быть в диапазоне от 3 до 20 символов\n");;
+    }
+    printf("Ваш будущий пароль для входа в аккаунта %s: %s\n", user->login, user->password);
+
+    while (1) {
+        printf("Введите номер карты без пробелов >> ");
+        scanf("%s", user->card);
+        if (regexec(&regex, user->card, 0, NULL, 0) == REG_NOMATCH)
+            printf("Номер карты не должен содержать лишних символов и содержать только цифры. Длина должна составлять 16 цифр.\n");
+        else break;
+    }
+
+    char filename[36] = "favorites/";
+    strcat(filename, user->login);
+    strcat(filename, ".txt");
+    FILE *file = fopen(filename, "w");
+    fclose(file);
+
+    user->favorites_size = 0;
+    user->is_admin = 0;
+    save_user(user);
 }
 
 int main() {
+
+    setlocale(LC_ALL, "Russian");
     Films *films = get_films_from_file("films.txt");
-    if (films != NULL) {
-        print_circle(films);
+    printf("Приветствую тебя в онлайн-кинотеатре.\n");
+    while (1) {
+        User *user = get_user();
+        if (!strlen(user->password)) {
+            system("clear");
+            sign_up(user);
+        }
+        system("clear");
+        if (!auth(user)) {
+            printf("Введён неверный пароль. Попробуйте войти снова.\n");
+            free(user);
+            continue;
+        }
+        break;
     }
+
+    system("clear");
+    printf("Вы успешно вошли в систему! Скоро здесь будет меню навигации.\n");
+
     return 0;
 }
