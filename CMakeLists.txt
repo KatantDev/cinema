@@ -7,6 +7,7 @@ find_package(Python3)
 enable_testing()
 
 configure_file(films.txt films.txt COPYONLY)
+configure_file(users.txt users.txt COPYONLY)
 add_executable(cinema main.c)
 
 message("${PYTHON_FOUND}")

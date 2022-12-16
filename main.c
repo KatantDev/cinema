@@ -1,6 +1,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <locale.h>
+#include <regex.h>
+#include <ctype.h>
+
+typedef struct {
+    char login[24];
+    char password[24];
+    char card[20];
+    int favorites_size;
+    int is_admin;
+} User;
 
 typedef struct Film {
     char title[96];
