@@ -32,7 +32,7 @@ typedef struct Films {
 
 // Создание кольцевого списка
 Films *create_films_ring() {
-    Films *films = (Films*)malloc(sizeof(Films));
+    Films *films = (Films *)malloc(sizeof(Films));
     films->size = 0;
     films->current = NULL;
     return films;
@@ -41,7 +41,7 @@ Films *create_films_ring() {
 // Добавление нового фильма в список
 Film *add_film(Films *ring) {
     Film *previous = NULL;
-    Film *film = (Film*)malloc(sizeof(Film));
+    Film *film = (Film *)malloc(sizeof(Film));
 
     if (ring->current == NULL) {
         ring->current = film;
@@ -62,20 +62,18 @@ Film *add_film(Films *ring) {
 // Считываем данные о фильмах из файла
 Films *get_films_from_file(const char *filename) {
     FILE *films_txt = fopen(filename, "r");
+    Films *films = create_films_ring();
     if (films_txt == NULL) {
-        printf("Ошибка: отсутствует файл с фильмами.\n");
-        return NULL;
+        return films;
     }
 
     fseek(films_txt, 0, SEEK_END);
     long size = ftell(films_txt);
     if (0 == size) {
-        printf("Ошибка: файл пуст.\n");
-        return NULL;
+        return films;
     }
     fseek(films_txt, 0, SEEK_SET);
 
-    Films *films = create_films_ring();
     while (!feof(films_txt)) {
         Film *film = add_film(films);
         fgets(film->title, sizeof(film->title), films_txt);
@@ -102,10 +100,11 @@ void print_circle(Films *films) {
     while (films->current != film);
 }
 
+// Счетчик длины
 size_t get_len(const char *string) {
     size_t size = 0;
     char byte;
-    for (int i = 0; ; i++) {
+    for (int i = 0;; i++) {
         byte = string[i];
         if (byte == '\0') {
             return size;
@@ -114,79 +113,61 @@ size_t get_len(const char *string) {
     }
 }
 
-void print_line_with_spaces(const char *string) {
-    const int title_length = get_len(string);
-    int title_spaces = (46 - title_length) / 2;
-    printf("║");
-    for (int j = 0; j < title_spaces; j++) {
-        printf(" ");
+// Вывод линий с информацией о фильме.
+void print_line_with_spaces(const char *string, const char position) {
+    size_t title_length = get_len(string), title_spaces;
+    if (!position) {
+        title_spaces = (46 - title_length) / 2;
+    } else {
+        title_length /= 2;
+        if (title_length % 2 == 0) title_length++;
+        title_spaces = (23 - title_length) / 2;
     }
+
+    if (position != 2) printf("║");
+    for (int j = 0; j < title_spaces; j++) printf(" ");
+
     text_red(stdout);
-    printf("%s", string);
+    if (!position) printf("%s", string);
+    else for (int j = 0; j < title_length; j++) printf("*");
     text_blue(stdout);
 
-    if (title_length % 2 != 0) title_spaces++;
-    for (int j = 0; j < title_spaces; j++) {
-        printf(" ");
-    }
-    printf("║");
+    if ((!position && title_length % 2 != 0) || (position && title_length % 2 == 0)) title_spaces++;
+    for (int j = 0; j < title_spaces; j++) printf(" ");
+
+    if (position != 1) printf("║");
+
 }
 
-void print_line_with_spaces2(const char *string, const char is_right) {
-    const int source_title_length = get_len(string);
-    int title_length = source_title_length / 2;
-    if (title_length % 2 == 0) title_length++;
-    int title_spaces = (23 - title_length) / 2;
-
-    if (!is_right) {
-        printf("║");
-    }
-    for (int j = 0; j < title_spaces; j++) {
-        printf(" ");
-    }
-    for (int j = 0; j < title_length; j++) {
-        printf("*");
-    }
-
-    if (title_length % 2 == 0) title_spaces++;
-    for (int j = 0; j < title_spaces; j++) {
-        printf(" ");
-    }
-    if (is_right) {
-        printf("║");
-    }
-}
-
-// вывод карусели
-void print_cards(Film* film) {
+// Вывод карусели с фильмами
+void print_cards(Film *film) {
     text_bold(stdout);
     text_blue(stdout);
-    printf("                        ");
-    printf("╔══════════════════════════════════════════════╗");
+    printf("                        ╔══════════════════════════════════════════════╗");
     printf("                        \n                        ");
     printf("║                                              ║");
     printf("                        \n                        ");
     printf("║                                              ║");
     printf("                        \n╔═══════════════════════");
-    print_line_with_spaces(film->title);
+    print_line_with_spaces(film->title, 0);
     printf("═══════════════════════╗\n║                       ");
     printf("║                                              ║");
     printf("                       ║\n");
-    print_line_with_spaces2(film->prev->title, 0);
-    print_line_with_spaces(film->genres);
-    print_line_with_spaces2(film->next->title, 1);
+    print_line_with_spaces(film->prev->title, 1);
+    print_line_with_spaces(film->genres, 0);
+    print_line_with_spaces(film->next->title, 2);
     printf("\n║                       ");
     printf("║                                              ║");
     printf("                       ║\n");
-    print_line_with_spaces2(film->prev->genres, 0);
-    print_line_with_spaces(film->countries);
-    print_line_with_spaces2(film->next->genres, 1);
+    print_line_with_spaces(film->prev->genres, 1);
+    print_line_with_spaces(film->countries, 0);
+    print_line_with_spaces(film->next->genres, 2);
     printf("\n║                       ");
     printf("║                                              ║");
     printf("                       ║\n");
-    print_line_with_spaces2(film->prev->countries, 0);
+    print_line_with_spaces(film->prev->countries, 1);
     printf("║                     %.1f+                     ║", film->rating);
-    print_line_with_spaces2(film->next->countries, 1);
+    print_line_with_spaces(film->next->countries, 2);
     printf("\n║                       ");
     printf("║                                              ║");
     printf("                       ║\n║                       ");
@@ -198,7 +179,7 @@ void print_cards(Film* film) {
     printf("          ***          ║\n║                       ");
     printf("║                                              ║");
     printf("                       ║\n╚═══════════════════════");
-    printf("╣                     %d                     ╠", film->year);
+    printf("║                     %d                     ║", film->year);
     printf("═══════════════════════╝\n                        ");
     printf("║                                              ║");
     printf("                        \n                        ");
@@ -208,35 +189,41 @@ void print_cards(Film* film) {
     reset_colors(stdout);
 }
 
+// Вывод гигачада
 void print_gigachad() {
-  printf("╔═══════════════════════════════════╗\n");
-  printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠛⠛⠛⠋⠉⠈⠉⠉⠉⠉⠛⠻⢿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⡿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⡏⣀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿║\n");
-  printf("║⣿⣿⣿⢏⣴⣿⣷⠀⠀⠀⠀⠀⢾⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿║\n");
-  printf("║⣿⣿⣟⣾⣿⡟⠁⠀⠀⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣷⢢⠀⠀⠀⠀⠀⠀⠀⢸⣿║\n");
-  printf("║⣿⣿⣿⣿⣟⠀⡴⠄⠀⠀⠀⠀⠀⠀⠙⠻⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⣿║\n");
-  printf("║⣿⣿⣿⠟⠻⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠶⢴⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⣿║\n");
-  printf("║⣿⣁⡀⠀⠀⢰⢠⣦⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⣿⣿⣿⣿⡄⠀⣴⣶⣿⡄⣿║\n");
-  printf("║⣿⡋⠀⠀⠀⠎⢸⣿⡆⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣿⠗⢘⣿⣟⠛⠿⣼║\n");
-  printf("║⣿⣿⠋⢀⡌⢰⣿⡿⢿⡀⠀⠀⠀⠀⠀⠙⠿⣿⣿⣿⣿⣿⡇⠀⢸⣿⣿⣧⢀⣼║\n");
-  printf("║⣿⣿⣷⢻⠄⠘⠛⠋⠛⠃⠀⠀⠀⠀⠀⢿⣧⠈⠉⠙⠛⠋⠀⠀⠀⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣧⠀⠈⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠟⠀⠀⠀⠀⢀⢃⠀⠀⢸⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⡿⠀⠴⢗⣠⣤⣴⡶⠶⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡸⠀⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⡀⢠⣾⣿⠏⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠉⠀⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣧⠈⢹⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⣦⣄⣀⣀⣀⣀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⣿⣿⡟⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠁⠀⠀⠹⣿⠃⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⢐⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
-  printf("║⣿⣿⣿⣿⠿⠛⠉⠉⠁⠀⢻⣿⡇⠀⠀⠀⠀⠀⠀⢀⠈⣿⣿⡿⠉⠛⠛⠛⠉⠉║\n");
-  printf("║⣿⡿⠋⠁⠀⠀⢀⣀⣠⡴⣸⣿⣇⡄⠀⠀⠀⠀⢀⡿⠄⠙⠛⠀⣀⣠⣤⣤⠄⠄║\n");
-  printf("╚═══════════════════════════════════╝\n");
+    printf("            Пока-пока!\n");
+    text_bold(stdout);
+    text_green(stdout);
+    printf("╔══════════════════════════════╗\n");
+    printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠿⠛⠛⠛⠋⠉⠈⠉⠉⠉⠉⠛⠻⢿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⡿⠋⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⢿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⡏⣀⠀⠀⠀⠀⠀⠀⠀⣀⣤⣤⣤⣄⡀⠀⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿║\n");
+    printf("║⣿⣿⣿⢏⣴⣿⣷⠀⠀⠀⠀⠀⢾⣿⣿⣿⣿⣿⣿⡆⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿║\n");
+    printf("║⣿⣿⣟⣾⣿⡟⠁⠀⠀⠀⠀⠀⢀⣾⣿⣿⣿⣿⣿⣷⢢⠀⠀⠀⠀⠀⠀⠀⢸⣿║\n");
+    printf("║⣿⣿⣿⣿⣟⠀⡴⠄⠀⠀⠀⠀⠀⠀⠙⠻⣿⣿⣿⣿⣷⣄⠀⠀⠀⠀⠀⠀⠀⣿║\n");
+    printf("║⣿⣿⣿⠟⠻⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠶⢴⣿⣿⣿⣿⣿⣧⠀⠀⠀⠀⠀⠀⣿║\n");
+    printf("║⣿⣁⡀⠀⠀⢰⢠⣦⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⣿⣿⣿⣿⡄⠀⣴⣶⣿⡄⣿║\n");
+    printf("║⣿⡋⠀⠀⠀⠎⢸⣿⡆⠀⠀⠀⠀⠀⠀⣴⣿⣿⣿⣿⣿⣿⣿⠗⢘⣿⣟⠛⠿⣼║\n");
+    printf("║⣿⣿⠋⢀⡌⢰⣿⡿⢿⡀⠀⠀⠀⠀⠀⠙⠿⣿⣿⣿⣿⣿⡇⠀⢸⣿⣿⣧⢀⣼║\n");
+    printf("║⣿⣿⣷⢻⠄⠘⠛⠋⠛⠃⠀⠀⠀⠀⠀⢿⣧⠈⠉⠙⠛⠋⠀⠀⠀⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣧⠀⠈⢸⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠟⠀⠀⠀⠀⢀⢃⠀⠀⢸⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⡿⠀⠴⢗⣠⣤⣴⡶⠶⠖⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⡸⠀⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⡀⢠⣾⣿⠏⠀⠠⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠉⠀⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣧⠈⢹⡇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣰⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣧⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣠⣾⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣷⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⣦⣄⣀⣀⣀⣀⠀⠀⠀⠀⠘⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣷⡄⠀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣧⠀⠀⠀⠙⣿⣿⡟⢻⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⠇⠀⠁⠀⠀⠹⣿⠃⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⣿⣿⣿⣿⡿⠛⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀⢐⣿⣿⣿⣿⣿⣿⣿⣿⣿║\n");
+    printf("║⣿⣿⣿⣿⠿⠛⠉⠉⠁⠀⢻⣿⡇⠀⠀⠀⠀⠀⠀⢀⠈⣿⣿⡿⠉⠛⠛⠛⠉⠉║\n");
+    printf("║⣿⡿⠋⠁⠀⠀⢀⣀⣠⡴⣸⣿⣇⡄⠀⠀⠀⠀⢀⡿⠄⠙⠛⠀⣀⣠⣤⣤⠄⠄║\n");
+    printf("╚══════════════════════════════╝\n");
+    reset_colors(stdout);
 }
 
+// Поиск пользователя в базе данных из файла users.txt
 User *get_user() {
     FILE *users_txt = fopen("users.txt", "r");
     User *user = (User*)malloc(sizeof(User));
@@ -267,7 +254,6 @@ User *get_user() {
             strtok(user->card, "\n");
 
             if (strcmp(user->login, user_input) == 0) {
-                free(user_input);
                 fclose(users_txt);
                 return user;
             }
@@ -279,8 +265,9 @@ User *get_user() {
     }
 }
 
-char auth(User* user) {
-    char *password = (char*)calloc(20, sizeof(password));
+// Авторизация существующего пользователя
+char login(User* user) {
+    char password[20];
     printf("Вход в аккаунт %s.\nВведите пароль >> ", user->login);
     scanf("%s", password);
     if (strcmp(user->password, password) == 0) {
@@ -289,6 +276,7 @@ char auth(User* user) {
     return 0;
 }
 
+// Сохранение данных о пользователе в файл
 void save_user(User *user) {
     FILE *users_txt = fopen("users.txt", "a");
     fprintf(users_txt, "%s\n", user->login);
@@ -298,6 +286,7 @@ void save_user(User *user) {
     fclose(users_txt);
 }
 
+// Создание нового аккаунта для пользователя
 void sign_up(User* user) {
     regex_t regex;
     if (regcomp(&regex, "^[[:digit:]]{16}$", REG_EXTENDED)) {
@@ -341,9 +330,8 @@ void sign_up(User* user) {
     save_user(user);
 }
 
-int main() {
-    setlocale(LC_ALL, "Russian");
-    Films *films = get_films_from_file("films.txt");
+// Авторизация/Регистрация аккаунта
+User *auth() {
     printf("Приветствую тебя в онлайн-кинотеатре.\n");
     while (1) {
         User *user = get_user();
@@ -352,42 +340,61 @@ int main() {
             sign_up(user);
         }
         system("clear");
-        if (!auth(user)) {
+        if (!login(user)) {
             printf("Введён неверный пароль. Попробуйте войти снова.\n");
             free(user);
             continue;
         }
-        break;
+        return user;
     }
-    system("clear");
-    int ch = 0;
-    if (films != NULL) {
-        // print_circle(films);
+}
+
+// Меню навигации для пользователя
+void navigation_menu() {
+
+}
+
+// Навигация внутри карусели
+void show_films(Films *films) {
+    if (films->current != NULL) {
         Film *film = films->current;
         while (1) {
             system("clear");
             print_cards(film);
             printf("                             Переход между фильмами на кнопки A и D\n");
-            system ("/bin/stty raw");
-            while (ch != 97 && ch != 100 && ch != 113) {
-                ch = getchar();
-            }
-            system ("/bin/stty cooked");
+            system("/bin/stty raw");
+            int ch = getchar();
+            system("/bin/stty cooked");
             if (ch == 97) {
                 film = film->prev;
             } else if (ch == 100) {
                 film = film->next;
+            } else if (ch == 102) {
+                // Добавить в избранное
+            } else if (ch == 109) {
+                // Подробная информация о фильме
             } else if (ch == 113) {
                 break;
             }
-            ch = 0;
         }
+    } else {
+        printf("Не удалось найти фильмы. Попросите администратор добавить их.\n");
     }
+}
+
+int main() {
+    setlocale(LC_ALL, "Russian");
+    Films *films = get_films_from_file("films.txt");
     system("clear");
-    printf("            Пока-пока!\n");
-    text_bold(stdout);
-    text_green(stdout);
-    print_gigachad();
-    reset_colors(stdout);
+
+    User *user = auth();
+    system("clear");
+
+    // navigation_menu();
+
+    show_films(films);
+    system("clear");
+
+    // print_gigachad();
     return 0;
 }
