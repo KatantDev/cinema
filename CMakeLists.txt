@@ -11,8 +11,8 @@ configure_file(users.txt users.txt COPYONLY)
 add_executable(cinema main.c)
 
 message("${PYTHON_FOUND}")
-add_test(
-        NAME films-txt
-        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.py
-        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
-)
+#add_test(
+#        NAME films-txt
+#        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.py
+#        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+#)
