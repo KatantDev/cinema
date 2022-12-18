@@ -461,7 +461,7 @@ Film *check_favorites(Films *favorites, Film *film) {
 }
 
 // Навигация внутри карусели
-void show_films(Films *films, User *user) {
+char show_films(Films *films, User *user, char view_favorites) {
     Film *film = films->current;
     while (films->current != NULL) {
         system("clear");
@@ -485,14 +485,15 @@ void show_films(Films *films, User *user) {
         } else if (ch == 'f' && !in_favorites) {
             add_favorite_film(user, film);
         } else if (ch == 'r' && in_favorites){
+            if (view_favorites) film = film->next;
             remove_favorite_film(user, in_favorites);
         } else if (ch == 'm') {
             print_addition_info(user, film, in_favorites);
         } else if (ch == 'q') {
-            return;
+            return 0;
         }
     }
-    printf("Не удалось найти фильмы. Попросите администратор добавить их.\n");
+    return 1;
 }
 
 // Меню навигации для пользователя
@@ -512,13 +513,14 @@ void navigation_menu(Films* films, User *user) {
         int ch = getchar();
         system("/bin/stty cooked");
 
+        char result = 0;
         if (ch == '1') {
             printf("Здесь будет личный кабинет.\n");
             // Переход в личный кабинет
         } else if (ch == '2') {
-            show_films(films, user);
+            result = show_films(films, user, 0);
         } else if (ch == '3') {
-            show_films(user->favorites, user);
+            result = show_films(user->favorites, user, 1);
         } else if (ch == '4' && user->is_admin) {
             printf("Здесь будет админ-панель.\n");
             // Переход в админ-панель
@@ -526,6 +528,11 @@ void navigation_menu(Films* films, User *user) {
             return;
         }
         system("clear");
+        if (ch == '2' && result) {
+            printf("Пока что администратор не добавил ни одного фильма.\n");
+        } else if (ch == '3' && result) {
+            printf("У вас нет фильмов в списке избранных. Для начала добавьте их.\n");
+        }
     }
 }
 
