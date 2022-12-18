@@ -6,14 +6,6 @@
 #include <ctype.h>
 #include "termcolor-c.h"
 
-typedef struct {
-    char login[24];
-    char password[24];
-    char card[20];
-    int favorites_size;
-    int is_admin;
-} User;
-
 typedef struct Film {
     char title[96];
     int year;
@@ -29,6 +21,14 @@ typedef struct Films {
     int size;
     Film *current;
 } Films;
+
+typedef struct {
+    char login[24];
+    char password[24];
+    char card[20];
+    Films *favorites;
+    int is_admin;
+} User;
 
 // Создание кольцевого списка
 Films *create_films_ring() {
@@ -271,6 +271,11 @@ char login(User* user) {
     printf("Вход в аккаунт %s.\nВведите пароль >> ", user->login);
     scanf("%s", password);
     if (strcmp(user->password, password) == 0) {
+        char filename[36] = "favorites/";
+        strcat(filename, user->login);
+        strcat(filename, ".txt");
+        user->favorites = get_films_from_file(filename);
+
         return 1;
     }
     return 0;
@@ -325,7 +330,7 @@ void sign_up(User* user) {
     FILE *file = fopen(filename, "w");
     fclose(file);
 
-    user->favorites_size = 0;
+    user->favorites = create_films_ring();
     user->is_admin = 0;
     save_user(user);
 }
