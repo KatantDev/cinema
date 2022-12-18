@@ -4,13 +4,13 @@
 #include <locale.h>
 #include <regex.h>
 #include <ctype.h>
+#include <sys/ioctl.h>
 #include "termcolor-c.h"
 
 typedef struct {
     char login[24];
     char password[24];
     char card[20];
-    int favorites_size;
     int is_admin;
 } User;
 
@@ -325,7 +325,6 @@ void sign_up(User* user) {
     FILE *file = fopen(filename, "w");
     fclose(file);
 
-    user->favorites_size = 0;
     user->is_admin = 0;
     save_user(user);
 }
@@ -349,11 +348,6 @@ User *auth() {
     }
 }
 
-// Меню навигации для пользователя
-void navigation_menu() {
-
-}
-
 // Навигация внутри карусели
 void show_films(Films *films) {
     if (films->current != NULL) {
@@ -369,32 +363,74 @@ void show_films(Films *films) {
                 film = film->prev;
             } else if (ch == 100) {
                 film = film->next;
-            } else if (ch == 102) {
-                // Добавить в избранное
-            } else if (ch == 109) {
-                // Подробная информация о фильме
+//            } else if (ch == 102) {
+//                // Добавить в избранное
+//            } else if (ch == 109) {
+//                // Подробная информация о фильме
             } else if (ch == 113) {
                 break;
             }
         }
+        system("clear");
     } else {
         printf("Не удалось найти фильмы. Попросите администратор добавить их.\n");
     }
 }
 
+// Меню навигации для пользователя
+void navigation_menu(Films* films, User *user) {
+    while (1) {
+        printf("╔ Добро пожаловать в меню навигации. Перейдите в нужный вам раздел.\n");
+        printf("╟ 1. Личный кабинет.\n");
+        printf("╟ 2. Каталог всех фильмов.\n");
+        printf("╟ 3. Каталог избранных фильмов.\n");
+        if (user->is_admin) {
+            printf("╟ 4. Админ-панель.\n");
+            printf("╚ e. Выход.\n");
+        } else {
+            printf("╚ e. Выход.\n");
+        }
+        system("/bin/stty raw");
+        int ch = getchar();
+        system("/bin/stty cooked");
+
+        if (ch == '1') {
+            printf("Здесь будет личный кабинет.\n");
+            // Переход в личный кабинет
+        } else if (ch == '2') {
+            show_films(films);
+        } else if (ch == '3') {
+            show_films(films);
+            // В дальнейшем заменить на вывод избранных
+        } else if (ch == '4' && user->is_admin) {
+            printf("Здесь будет админ-панель.\n");
+            // Переход в админ-панель
+        } else if (ch == 'e') {
+            return;
+        }
+        system("clear");
+    }
+}
+
 int main() {
     setlocale(LC_ALL, "Russian");
+
+    struct winsize w;
+    ioctl(STDOUT_FILENO, TIOCGWINSZ, &w);
+    if (w.ws_col < 96 || w.ws_row < 28) {
+        printf("Минимальное разрешение терминала для успешной работы 96x28.\n");
+        return 0;
+    }
+
     Films *films = get_films_from_file("films.txt");
     system("clear");
 
     User *user = auth();
     system("clear");
 
-    // navigation_menu();
-
-    show_films(films);
+    navigation_menu(films, user);
     system("clear");
 
-    // print_gigachad();
+    print_gigachad();
     return 0;
 }

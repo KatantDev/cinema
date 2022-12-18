@@ -6,6 +6,7 @@ set(CMAKE_C_STANDARD 99)
 find_package(Python3)
 enable_testing()
 
+file(COPY favorites DESTINATION .)
 configure_file(films.txt films.txt COPYONLY)
 configure_file(users.txt users.txt COPYONLY)
 add_executable(cinema main.c)
