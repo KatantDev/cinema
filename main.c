@@ -359,6 +359,29 @@ void navigation_menu() {
 
 }
 
+void print_addition_info(Film *film) {
+    while (1) {
+        system("clear");
+        printf("Название: %s\n", film->title);
+        printf("Год производства: %d\n", film->year);
+        printf("Страны производства: %s\n", film->countries);
+        printf("Жанры: %s\n", film->genres);
+        printf("Рейтинг: %.1f\n\n", film->rating);
+        printf("Есть ли в избранном? %s.\n", "Нет");
+        printf("Q - выход, F - добавить/удалить из избранного.\n");
+
+        system("/bin/stty raw");
+        int ch = getchar();
+        system("/bin/stty cooked");
+        if (ch == 'f') {
+            printf("Здесь будет добавление/удаление из списка избранных.");
+            // Допилить функционал добавления/удаления фильма из списка избранных.
+        } else if (ch == 'q') {
+            return;
+        }
+    }
+}
+
 // Навигация внутри карусели
 void show_films(Films *films) {
     if (films->current != NULL) {
@@ -367,6 +390,7 @@ void show_films(Films *films) {
             system("clear");
             print_cards(film);
             printf("                             Переход между фильмами на кнопки A и D\n");
+            printf("                             Подробная информация - M\n");
             system("/bin/stty raw");
             int ch = getchar();
             system("/bin/stty cooked");
@@ -377,7 +401,7 @@ void show_films(Films *films) {
             } else if (ch == 102) {
                 // Добавить в избранное
             } else if (ch == 109) {
-                // Подробная информация о фильме
+                print_addition_info(films->current);
             } else if (ch == 113) {
                 break;
             }
