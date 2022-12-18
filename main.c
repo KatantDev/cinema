@@ -160,7 +160,6 @@ User *get_user() {
             strtok(user->card, "\n");
 
             if (strcmp(user->login, user_input) == 0) {
-                free(user_input);
                 fclose(users_txt);
                 return user;
             }
@@ -235,7 +234,6 @@ void sign_up(User* user) {
 }
 
 int main() {
-
     setlocale(LC_ALL, "Russian");
     Films *films = get_films_from_file("films.txt");
     printf("Приветствую тебя в онлайн-кинотеатре.\n");
