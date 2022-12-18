@@ -1,19 +1,18 @@
-cmake_minimum_required (VERSION 3.0.0)
-project (main C)
+cmake_minimum_required(VERSION 3.0.0)
+project(cinema C)
 
-SET(CMAKE_EXPORT_COMPILE_COMMANDS 1)
-SET(CMAKE_C_COMPILER "clang")
-SET(CMAKE_C_STANDARD_INCLUDE_DIRECTORIES ${CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES})
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
+set(CMAKE_C_STANDARD 99)
 
-include_directories(include)
-file(GLOB_RECURSE SRC *.c)
-add_executable(main ${SRC})
+find_package(Python3)
+enable_testing()
 
-add_custom_target(
-	copy-compile-commands ALL
-	${CMAKE_COMMAND} -E copy_if_different
-	${CMAKE_BINARY_DIR}/compile_commands.json
-	${CMAKE_CURRENT_LIST_DIR}
-)
+configure_file(films.txt films.txt COPYONLY)
+configure_file(users.txt users.txt COPYONLY)
+add_executable(cinema main.c)
+
+message("${PYTHON_FOUND}")
+#add_test(
+#        NAME films-txt
+#        COMMAND python3 ${CMAKE_CURRENT_SOURCE_DIR}/tests/test.py
+#        WORKING_DIRECTORY ${EXECUTABLE_OUTPUT_PATH}
+#)
