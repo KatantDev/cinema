@@ -1,11 +1,13 @@
+#include "termcolor-c.h"
+#include <dirent.h>
+#include <termios.h>
+#include <ctype.h>
+#include <locale.h>
+#include <regex.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <locale.h>
-#include <regex.h>
-#include <ctype.h>
 #include <sys/ioctl.h>
-#include "termcolor-c.h"
 
 typedef struct Film {
     char title[96];
@@ -30,6 +32,33 @@ typedef struct {
     Films *favorites;
     int is_admin;
 } User;
+
+// Выбор пункта меню
+int input_mode() {
+    struct termios tio;
+
+    if (tcgetattr(STDIN_FILENO, &tio) != 0) {
+        perror("tcgetattr");
+        exit(EXIT_FAILURE);
+    }
+
+    tio.c_lflag &= ~(ICANON | ECHO);
+
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio) != 0) {
+        perror("tcsetattr");
+        exit(EXIT_FAILURE);
+    }
+
+    int ch = getchar();
+
+    tio.c_lflag |= ICANON | ECHO;
+    if (tcsetattr(STDIN_FILENO, TCSAFLUSH, &tio) != 0) {
+        perror("tcsetattr");
+        exit(EXIT_FAILURE);
+    }
+
+    return ch;
+}
 
 // Создание кольцевого списка
 Films *create_films_ring() {
@@ -407,35 +436,62 @@ Film *add_favorite_film(User *user, Film *film) {
     return favorite_film;
 }
 
-// Удалить фильм из избранных
-void remove_favorite_film(User *user, Film *film) {
-    char filename[36] = "favorites/";
-    strcat(filename, user->login);
-    strcat(filename, ".txt");
-
+// Удаление фильма из файла
+void remove_film_from_file(Films *films, Film *delete_film, const char *filename) {
     FILE *temp_file = fopen("temp.txt", "a");
-    Film *favorite_film = user->favorites->current;
+    Film *film = films->current;
     do {
-        if (strstr(favorite_film->title, film->title)) {
-            remove_film(user->favorites, film);
+        if (strstr(film->title, delete_film->title)) {
+            remove_film(films, film);
             break;
         }
-        favorite_film = favorite_film->next;
-    } while (favorite_film != user->favorites->current);
+        film = film->next;
+    } while (film != films->current);
 
-    if (user->favorites->current) {
-        favorite_film = user->favorites->current;
+    if (films->current) {
+        film = films->current;
         do {
-            write_film(temp_file, favorite_film);
-            favorite_film = favorite_film->next;
-        } while (favorite_film != user->favorites->current);
+            write_film(temp_file, film);
+            film = film->next;
+        } while (film != films->current);
     }
     fclose(temp_file);
     rename("temp.txt", filename);
 }
 
+// Удаление фильма из избранных
+void remove_favorite_film(User *user, Film *film) {
+    char filename[36] = "favorites/";
+    strcat(filename, user->login);
+    strcat(filename, ".txt");
+    remove_film_from_file(user->favorites, film, filename);
+}
+
+// Удаление фильма из каталога
+void remove_film_admin(Films *films, User *user, Film *film) {
+    DIR *dir;
+    struct dirent *entry;
+    dir = opendir("favorites");
+
+    char filename[36];
+    Films *favorite_films;
+    while ((entry = readdir(dir)) != NULL) {
+        if (!strcmp(entry->d_name, ".") || !strcmp(entry->d_name, "..")) continue;
+        strcpy(filename, "favorites/");
+        strcat(filename, entry->d_name);
+        favorite_films = get_films_from_file(filename);
+        if (favorite_films->current != NULL) {
+            remove_film_from_file(favorite_films, film, filename);
+        }
+        free(favorite_films);
+    }
+    closedir(dir);
+    remove_favorite_film(user, film);
+    remove_film_from_file(films, film, "films.txt");
+}
+
 // Вывод подробной информации о фильме
-void print_addition_info(User* user, Film *film, Film *in_favorites) {
+int print_addition_info(Films *films, User *user, Film *film, Film *in_favorites, const char view_type) {
     while (1) {
         system("clear");
         printf("Название: %s\n", film->title);
@@ -444,19 +500,24 @@ void print_addition_info(User* user, Film *film, Film *in_favorites) {
         printf("Жанры: %s\n", film->genres);
         printf("Рейтинг: %.1f\n\n", film->rating);
         printf("Q - выход, ");
-        if (!in_favorites) printf("F - добавить в избранное.\n");
-        else printf("R - удалить из избранных.\n");
+        if (!in_favorites && view_type != 2) {
+            if (in_favorites) printf("R - удалить из избранных.\n");
+            else printf("F - добавить в избранное.\n");
+        } else {
+            printf("R - удалить фильм");
+        }
 
-        system("/bin/stty raw");
-        int ch = getchar();
-        system("/bin/stty cooked");
+        int ch = input_mode();
         if (ch == 'f' && !in_favorites) {
             in_favorites = add_favorite_film(user, film);
-        } else if (ch == 'r' && in_favorites) {
+        } else if (ch == 'r' && in_favorites && view_type != 2) {
             remove_favorite_film(user, in_favorites);
             in_favorites = NULL;
+            if (view_type) return 1;
+        } else if (ch == 'r' && view_type == 2) {
+            remove_film_admin(films, user, film);
         } else if (ch == 'q') {
-            return;
+            return 0;
         }
     }
 }
@@ -474,34 +535,43 @@ Film *check_favorites(Films *favorites, Film *film) {
 }
 
 // Навигация внутри карусели
-char show_films(Films *films, User *user, char view_favorites) {
+char show_films(Films *films, User *user, const char view_type) {
     Film *film = films->current;
     while (films->current != NULL) {
         system("clear");
         print_cards(film);
-        printf("                             Переход между фильмами на кнопки A и D\n");
+        printf("                             Переход между фильмами на кнопки A и "
+               "D\n");
         printf("                      Подробная информация - M, ");
 
         Film *in_favorites = NULL;
-        if (user->favorites->size) in_favorites = check_favorites(user->favorites, film);
-        if (!in_favorites) printf("Добавить в избранные - F\n");
-        else printf("Удалить из избранных - R\n");
+        if (view_type != 2) {
+            if (user->favorites->size)
+                in_favorites = check_favorites(user->favorites, film);
+            if (!in_favorites)
+                printf("Добавить в избранные - F\n");
+            else
+                printf("Удалить из избранных - R\n");
+        } else {
+            printf("Удалить из каталога - R");
+        }
 
-        system("/bin/stty raw");
-        int ch = getchar();
-        system("/bin/stty cooked");
-
+        int ch = input_mode();
         if (ch == 'a') {
             film = film->prev;
         } else if (ch == 'd') {
             film = film->next;
-        } else if (ch == 'f' && !in_favorites) {
+        } else if (ch == 'f' && !in_favorites && view_type != 2) {
             add_favorite_film(user, film);
-        } else if (ch == 'r' && in_favorites){
-            if (view_favorites) film = film->next;
+        } else if (ch == 'r' && in_favorites && view_type != 2) {
+            if (view_type == 1) film = film->next;
             remove_favorite_film(user, in_favorites);
+        } else if (ch == 'r' && view_type == 2) {
+            Film *temp = film->next;
+            remove_film_admin(films, user, film);
+            film = temp;
         } else if (ch == 'm') {
-            print_addition_info(user, film, in_favorites);
+            if (print_addition_info(films, user, film, in_favorites, view_type)) film = film->next;
         } else if (ch == 'q') {
             return 0;
         }
@@ -657,6 +727,61 @@ void profile(User *user) {
     }
 }
 
+// Добавление фильмов в режиме админа
+void add_film_admin(Films *films) {
+    system("clear");
+    Film *film = add_film(films);
+
+    char buffer[100];
+    printf("Введите название фильма >> ");
+    gets(film->title);
+
+    while (1) {
+        printf("Введите год фильма >> ");
+        gets(buffer);
+        film->year = atoi(buffer);
+        if (film->year > 1900 && film->year < 2025) break;
+    }
+
+    printf("Введите страны в которых сделан фильм >> ");
+    gets(film->countries);
+
+    printf("Введите жанры фильма >> ");
+    gets(film->genres);
+
+    while (1) {
+        printf("Введите рейтинг фильма >> ");
+        gets(buffer);
+        film->rating = atof(buffer);
+        if (film->rating > 0 && film->rating < 10) break;
+    }
+
+    FILE *films_txt = fopen("films.txt", "a");
+    write_film(films_txt, film);
+    fclose(films_txt);
+}
+
+// Админ панель
+void admin_panel(Films *films, User *user) {
+    while (1) {
+        system("clear");
+        printf("╔ Добро пожаловать в меню навигации. Перейдите в нужный вам "
+               "раздел.\n");
+        printf("╟ 1. Добавить фильм.\n");
+        printf("╟ 2. Удаление фильмов.\n");
+        printf("╚ e. Выход.\n");
+
+        int ch = input_mode();
+        if (ch == '1') {
+            add_film_admin(films);
+        } else if (ch == '2') {
+            show_films(films, user, 2);
+        } else if (ch == 'e') {
+            return;
+        }
+    }
+}
+
 // Меню навигации для пользователя
 void navigation_menu(Films* films, User *user) {
     while (1) {
@@ -671,10 +796,7 @@ void navigation_menu(Films* films, User *user) {
             printf("╚ e. Выход.\n");
         }
 
-        system("/bin/stty raw");
-        int ch = getchar();
-        system("/bin/stty cooked");
-
+        int ch = input_mode();
         char result;
         if (ch == '1') {
             profile(user);
@@ -683,8 +805,7 @@ void navigation_menu(Films* films, User *user) {
         } else if (ch == '3') {
             result = show_films(user->favorites, user, 1);
         } else if (ch == '4' && user->is_admin) {
-            printf("Здесь будет админ-панель.\n");
-            // Переход в админ-панель
+            admin_panel(films, user);
         } else if (ch == 'e') {
             return;
         }
