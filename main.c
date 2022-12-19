@@ -479,8 +479,6 @@ void remove_favorite_film(User *user, Film *film) {
 
 // Удаление фильма из каталога
 void remove_film_admin(Films *films, User *user, Film *film) {
-	FILE *log = fopen("log.txt", "a");
-
 	DIR *dir;
     struct dirent *entry;
     dir = opendir("favorites");
@@ -493,10 +491,7 @@ void remove_film_admin(Films *films, User *user, Film *film) {
         strcat(filename, entry->d_name);
 		favorite_films = get_films_from_file(filename);
 		if (favorite_films->current != NULL) {
-			fprintf(log, "%s - Completed\n", filename);
 			remove_film_from_file(favorite_films, film, filename);
-		} else {
-			fprintf(log, "%s - NULL\n", filename);
 		}
 		free(favorite_films);
     }
