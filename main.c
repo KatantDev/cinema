@@ -267,7 +267,7 @@ User *get_user() {
             strtok(user->password, "\n");
             strtok(user->card, "\n");
 
-            if (strstr(user->login, user_input)) {
+            if (!strcmp(user->login, user_input)) {
                 fclose(users_txt);
                 return user;
             }
@@ -284,7 +284,7 @@ char login(User* user) {
     char password[20];
     printf("Вход в аккаунт %s.\nВведите пароль >> ", user->login);
     scanf("%s", password);
-    if (strstr(user->password, password)) {
+    if (!strcmp(user->password, password)) {
         char filename[36] = "favorites/";
         strcat(filename, user->login);
         strcat(filename, ".txt");
@@ -305,14 +305,25 @@ void save_user(User *user) {
     fclose(users_txt);
 }
 
+char check_luhn(const char *card_number) {
+    int len = (int) strlen(card_number);
+    int number, sum = 0;
+    for(int i = 0; i < len; i++) {
+        if (!isdigit(card_number[i])) return 0;
+        number = card_number[i] - '0';
+        if ((i & 1) == 0) {
+            number *= 2;
+            if(number > 9) number -= 9;
+        }
+        sum += number;
+        if (sum >= 10) sum -= 10;
+    }
+    if (sum == 0) return 1;
+    else return 0;
+}
+
 // Создание нового аккаунта для пользователя
 void sign_up(User* user) {
-    regex_t regex;
-    if (regcomp(&regex, "^[[:digit:]]{16}$", REG_EXTENDED)) {
-        fprintf(stderr, "Не удалось скомпилировать regex-выражение.\n");
-        exit(1);
-    }
-
     printf("Регистрация аккаунта с логином %s.\n", user->login);
     while (1) {
         printf("Введите пароль для аккаунта (от 6 до 20 символов) >> ");
@@ -323,18 +334,17 @@ void sign_up(User* user) {
             if (isupper(user->password[i])) has_uppercase++;
             if (isdigit(user->password[i])) has_number++;
         }
-        if (has_lowercase && has_uppercase && has_number && strlen(user->password) > 6) break;
+        if (has_lowercase && has_uppercase && has_number && strlen(user->password) >= 6) break;
         else
             printf("Пароль должен содержать хотя бы одну латинскую букву в верхнем и нижнем регистре. "
-                   "И его длина должна быть в диапазоне от 3 до 20 символов\n");;
+                   "И его длина должна быть в диапазоне от 3 до 20 символов\n");
     }
     printf("Ваш будущий пароль для входа в аккаунта %s: %s\n", user->login, user->password);
 
     while (1) {
         printf("Введите номер карты без пробелов >> ");
         scanf("%s", user->card);
-        if (regexec(&regex, user->card, 0, NULL, 0) == REG_NOMATCH)
-            printf("Номер карты не должен содержать лишних символов и содержать только цифры. Длина должна составлять 16 цифр.\n");
+        if (!check_luhn(user->card)) printf("Карта невалидна.\n");
         else break;
     }
 
@@ -368,6 +378,7 @@ User *auth() {
     }
 }
 
+// Запись информации о фильме в файл
 void write_film(FILE *file, Film *film) {
     fprintf(file, "%s\n", film->title);
     fprintf(file, "%d\n", film->year);
@@ -376,6 +387,7 @@ void write_film(FILE *file, Film *film) {
     fprintf(file, "%.1f\n", film->rating);
 }
 
+// Добавить фильм в избранные
 Film *add_favorite_film(User *user, Film *film) {
     Film *favorite_film = add_film(user->favorites);
     strcpy(favorite_film->title, film->title);
@@ -395,6 +407,7 @@ Film *add_favorite_film(User *user, Film *film) {
     return favorite_film;
 }
 
+// Удалить фильм из избранных
 void remove_favorite_film(User *user, Film *film) {
     char filename[36] = "favorites/";
     strcat(filename, user->login);
@@ -496,10 +509,158 @@ char show_films(Films *films, User *user, char view_favorites) {
     return 1;
 }
 
+// Проверка пользователя на существование в системе с определенным логином
+char check_field(const char *field) {
+    FILE *users_txt = fopen("users.txt", "r");
+    User *user = (User *)malloc(sizeof(User));
+    while (fgets(user->login, sizeof(user->login), users_txt)) {
+        fgets(user->password, sizeof(user->password), users_txt);
+        fgets(user->card, sizeof(user->card), users_txt);
+        fscanf(users_txt, "%d\n", &user->is_admin);
+
+        strtok(user->login, "\n");
+        strtok(user->login, "\n");
+        strtok(user->login, "\n");
+
+        if (!strcmp(user->login, field)) {
+            free(user);
+            fclose(users_txt);
+            return 1;
+        }
+    }
+
+    free(user);
+    fclose(users_txt);
+    return 0;
+}
+
+// Редактирование строк в файле
+void edit_field(const char *login, const char *field_name, const char *field) {
+    FILE *users_txt = fopen("users.txt", "r");
+    FILE *users_temp = fopen("temp.txt", "w");
+
+    User *temp_user = (User *)malloc(sizeof(User));
+    while (fgets(temp_user->login, sizeof(temp_user->login), users_txt)) {
+        fgets(temp_user->password, sizeof(temp_user->password), users_txt);
+        fgets(temp_user->card, sizeof(temp_user->card), users_txt);
+        fscanf(users_txt, "%d\n", &temp_user->is_admin);
+
+        strtok(temp_user->login, "\n");
+        strtok(temp_user->password, "\n");
+        strtok(temp_user->card, "\n");
+
+        if (!strcmp(field_name, "login") && !strcmp(temp_user->login, login)) fprintf(users_temp, "%s\n", field);
+        else fprintf(users_temp, "%s\n", temp_user->login);
+        if (!strcmp(field_name, "password") && !strcmp(temp_user->login, login)) fprintf(users_temp, "%s\n", field);
+        else fprintf(users_temp, "%s\n", temp_user->password);
+        if (!strcmp(field_name, "card") && !strcmp(temp_user->login, login)) fprintf(users_temp, "%s\n", field);
+        else fprintf(users_temp, "%s\n", temp_user->card);
+        fprintf(users_temp, "%d\n", temp_user->is_admin);
+    }
+    fclose(users_txt);
+    fclose(users_temp);
+
+    rename("temp.txt", "users.txt");
+}
+
+// Изменение логина
+void change_login(User *user) {
+    printf("Ваш текущий логин: %s. (Чтобы выйти из функции - введите \"Q\")\n", user->login);
+
+    regex_t regex;
+    if (regcomp(&regex, "^[[:alpha:][:digit:]]{3,20}$", REG_EXTENDED)) {
+        fprintf(stderr, "Не удалось скомпилировать regex-выражение.\n");
+        exit(1);
+    }
+
+    char field[24];
+    while (1) {
+        printf("Введите логин на который хотите изменить >> ");
+        scanf("%s", field);
+        if (!strcmp(user->login, field) || !strcmp(field, "Q")) {
+            return;
+        } else if (regexec(&regex, field, 0, NULL, 0) == REG_NOMATCH) {
+            printf("Логин должен состоять из латинских букв и цифр. И его длина должна быть в диапазоне 3-20 символов.\n");
+        } else if (check_field(field)) {
+            printf("Такой логин уже используется.\n");
+        } else {
+            break;
+        }
+    }
+    edit_field(user->login, "login", field);
+    strcpy(user->login, field);
+}
+
+// Изменение пароля
+void change_password(User *user) {
+    printf("Ваш текущий пароль: %s. (Чтобы выйти из функции - введите \"Q\")\n", user->password);
+
+    char field[24];
+    while (1) {
+        printf("Введите новый пароль для аккаунта (от 6 до 20 символов) >> ");
+        scanf("%s", field);
+        if (!strcmp(field, "Q") || !strcmp(user->password, field)) return;
+        int has_lowercase = 0, has_uppercase = 0, has_number = 0;
+        for (int i = 0; i < strlen(field); i++) {
+            if (islower(field[i])) has_lowercase++;
+            if (isupper(field[i])) has_uppercase++;
+            if (isdigit(field[i])) has_number++;
+        }
+        if (has_lowercase && has_uppercase && has_number && strlen(field) >= 6) break;
+        else
+            printf("Пароль должен содержать хотя бы одну латинскую букву в верхнем и нижнем регистре. "
+                   "И его длина должна быть в диапазоне от 3 до 20 символов\n");
+    }
+    edit_field(user->login, "password", field);
+    strcpy(user->password, field);
+}
+
+// Изменение номера карты
+void change_card(User *user) {
+    printf("Ваш текущий номер карты: %s. (Чтобы выйти из функции - введите \"Q\")\n", user->card);
+
+    char field[24];
+    while (1) {
+        printf("Введите номер карты на который хотите сменить >> ");
+        scanf("%s", field);
+        if (check_luhn(field)) break;
+        else printf("Карта невалидна.\n");
+    }
+    edit_field(user->login, "card", field);
+    strcpy(user->card, field);
+}
+
+// Меню личного кабинета
+void profile(User *user) {
+    while (1) {
+        system("clear");
+        printf("╔ %s, добро пожаловать в личный кабинет. Здесь вы можете изменить данные профиля.\n", user->login);
+        printf("╟ 1. Изменить имя пользователя.\n");
+        printf("╟ 2. Сменить пароль.\n");
+        printf("╟ 3. Изменить номер карты.\n");
+        printf("╚ e. Выход.\n");
+
+        system("/bin/stty raw");
+        int ch = getchar();
+        system("/bin/stty cooked");
+
+        system("clear");
+        if (ch == '1') {
+            change_login(user);
+        } else if (ch == '2') {
+            change_password(user);
+        } else if (ch == '3') {
+            change_card(user);
+        } else if (ch == 'e') {
+            return;
+        }
+    }
+}
+
 // Меню навигации для пользователя
 void navigation_menu(Films* films, User *user) {
     while (1) {
-        printf("╔ Добро пожаловать в меню навигации. Перейдите в нужный вам раздел.\n");
+        printf("╔ %s, добро пожаловать в меню навигации. Перейдите в нужный вам раздел.\n", user->login);
         printf("╟ 1. Личный кабинет.\n");
         printf("╟ 2. Каталог всех фильмов.\n");
         printf("╟ 3. Каталог избранных фильмов.\n");
@@ -509,14 +670,14 @@ void navigation_menu(Films* films, User *user) {
         } else {
             printf("╚ e. Выход.\n");
         }
+
         system("/bin/stty raw");
         int ch = getchar();
         system("/bin/stty cooked");
 
-        char result = 0;
+        char result;
         if (ch == '1') {
-            printf("Здесь будет личный кабинет.\n");
-            // Переход в личный кабинет
+            profile(user);
         } else if (ch == '2') {
             result = show_films(films, user, 0);
         } else if (ch == '3') {
