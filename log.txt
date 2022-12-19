@@ -1,5 +1,0 @@
-favorites/Polupoker.txt - NULL
-favorites/Admin.txt - Completed
-favorites/Cat.txt - Completed
-favorites/Karat.txt - Completed
-favorites/Nikita.txt - Completed

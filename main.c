@@ -633,6 +633,17 @@ void edit_field(const char *login, const char *field_name, const char *field) {
     rename("temp.txt", "users.txt");
 }
 
+void rename_favorites(const char *old_login, const char *new_login) {
+    char old_filename[36] = "favorites/";
+    strcat(old_filename, old_login);
+    strcat(old_filename, ".txt");
+
+    char new_filename[36] = "favorites/";
+    strcat(new_filename, new_login);
+    strcat(new_filename, ".txt");
+    rename(old_filename, new_filename);
+}
+
 // Изменение логина
 void change_login(User *user) {
     printf("Ваш текущий логин: %s. (Чтобы выйти из функции - введите \"Q\")\n", user->login);
@@ -658,6 +669,7 @@ void change_login(User *user) {
         }
     }
     edit_field(user->login, "login", field);
+    rename_favorites(user->login, field);
     strcpy(user->login, field);
 }
 
