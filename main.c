@@ -33,6 +33,7 @@ typedef struct {
   int is_admin;
 } User;
 
+// Выбор пункта меню
 int input_mode() {
 	struct termios tio;
 
@@ -132,8 +133,7 @@ Films *get_films_from_file(const char *filename) {
   return films;
 }
 
-// Вывод полного двусвязного списка для наглядности того, что все действительно
-// работает
+// Вывод полного двусвязного списка для наглядности того, что все действительно работает
 void print_circle(Films *films) {
   Film *film = films->current;
   do {
@@ -420,6 +420,7 @@ User *auth() {
   }
 }
 
+// Запись фильма в структуру
 void write_film(FILE *file, Film *film) {
   fprintf(file, "%s\n", film->title);
   fprintf(file, "%d\n", film->year);
@@ -428,6 +429,7 @@ void write_film(FILE *file, Film *film) {
   fprintf(file, "%.1f\n", film->rating);
 }
 
+// Добавить фильм в избранные
 Film *add_favorite_film(User *user, Film *film) {
   Film *favorite_film = add_film(user->favorites);
   strcpy(favorite_film->title, film->title);
@@ -447,6 +449,7 @@ Film *add_favorite_film(User *user, Film *film) {
   return favorite_film;
 }
 
+// Удаление фильма из файла
 void remove_film_from_file(Films *films, Film *delete_film, const char *filename) {
 	FILE *temp_file = fopen("temp.txt", "a");
 	Film *film = films->current;
@@ -469,7 +472,7 @@ void remove_film_from_file(Films *films, Film *delete_film, const char *filename
 	rename("temp.txt", filename);
 }
 
-// Удаление фильма из 
+// Удаление фильма из избранных
 void remove_favorite_film(User *user, Film *film) {
 	char filename[36] = "favorites/";
 	strcat(filename, user->login);
@@ -498,7 +501,6 @@ void remove_film_admin(Films *films, User *user, Film *film) {
     closedir(dir);
 	remove_favorite_film(user, film);
 	remove_film_from_file(films, film, "films.txt");
-	fclose(log);
 }
 
 // Вывод подробной информации о фильме
