@@ -104,43 +104,30 @@ void remove_film(Films *films, Film *film)
 
 // Считываем данные о фильмах из файла
 Films *get_films_from_file(const char *filename) {
-    FILE *films_txt = fopen(filename, "r");
+    FILE *txt = fopen(filename, "r");
     Films *films = create_films_ring();
-    if (films_txt == NULL) {
+
+    fseek(txt, 0, SEEK_END);
+    long pos = ftell(txt);
+    if (pos == 0) {
         return films;
     }
+    fseek(txt, 0, SEEK_SET);
 
-    fseek(films_txt, 0, SEEK_END);
-    long size = ftell(films_txt);
-    if (0 == size) {
-        return films;
-    }
-    fseek(films_txt, 0, SEEK_SET);
-
-    while (!feof(films_txt)) {
+    while (!feof(txt)) {
         Film *film = add_film(films);
-        fgets(film->title, sizeof(film->title), films_txt);
-        fscanf(films_txt, "%d\n", &film->year);
-        fgets(film->countries, sizeof(film->countries), films_txt);
-        fgets(film->genres, sizeof(film->genres), films_txt);
-        fscanf(films_txt, "%f\n", &film->rating);
+        fgets(film->title, sizeof(film->title), txt);
+        fscanf(txt, "%d\n", &film->year);
+        fgets(film->countries, sizeof(film->countries), txt);
+        fgets(film->genres, sizeof(film->genres), txt);
+        fscanf(txt, "%f\n", &film->rating);
 
         strtok(film->title, "\n");
         strtok(film->countries, "\n");
         strtok(film->genres, "\n");
     }
-    fclose(films_txt);
+    fclose(txt);
     return films;
-}
-
-// Вывод полного двусвязного списка для наглядности того, что все действительно работает
-void print_circle(Films *films) {
-    Film *film = films->current;
-    do {
-        printf("%s\n%d\n%s\n%s\n%.1f\n", film->title, film->year, film->countries, film->genres, film->rating);
-        film = film->next;
-    }
-    while (films->current != film);
 }
 
 // Счетчик длины
@@ -268,7 +255,7 @@ void print_gigachad() {
 
 // Поиск пользователя в базе данных из файла users.txt
 User *get_user() {
-    FILE *users_txt = fopen("users.txt", "r");
+    FILE *users_txt = fopen("users.txt", "r+");
     User *user = (User*)malloc(sizeof(User));
     char user_input[24];
 
@@ -500,11 +487,11 @@ int print_addition_info(Films *films, User *user, Film *film, Film *in_favorites
         printf("Жанры: %s\n", film->genres);
         printf("Рейтинг: %.1f\n\n", film->rating);
         printf("Q - выход, ");
-        if (!in_favorites && view_type != 2) {
+        if (view_type == 2) {
+            printf("R - удалить фильм");
+        } else {
             if (in_favorites) printf("R - удалить из избранных.\n");
             else printf("F - добавить в избранное.\n");
-        } else {
-            printf("R - удалить фильм");
         }
 
         int ch = input_mode();
@@ -589,8 +576,8 @@ char check_field(const char *field) {
         fscanf(users_txt, "%d\n", &user->is_admin);
 
         strtok(user->login, "\n");
-        strtok(user->login, "\n");
-        strtok(user->login, "\n");
+        strtok(user->password, "\n");
+        strtok(user->card, "\n");
 
         if (!strcmp(user->login, field)) {
             free(user);
@@ -746,27 +733,31 @@ void add_film_admin(Films *films) {
 
     char buffer[100];
     printf("Введите название фильма >> ");
-    gets(film->title);
+    fgets(film->title, sizeof(film->title), stdin);
 
     while (1) {
         printf("Введите год фильма >> ");
-        gets(buffer);
+        fgets(buffer, sizeof(buffer), stdin);
         film->year = atoi(buffer);
         if (film->year > 1900 && film->year < 2025) break;
     }
 
     printf("Введите страны в которых сделан фильм >> ");
-    gets(film->countries);
+    fgets(film->countries, sizeof(film->countries), stdin);
 
     printf("Введите жанры фильма >> ");
-    gets(film->genres);
+    fgets(film->genres, sizeof(film->genres), stdin);
 
     while (1) {
         printf("Введите рейтинг фильма >> ");
-        gets(buffer);
+        fgets(buffer, sizeof(buffer), stdin);
         film->rating = atof(buffer);
         if (film->rating > 0 && film->rating < 10) break;
     }
+
+    strtok(film->title, "\r\n");
+    strtok(film->countries, "\r\n");
+    strtok(film->genres, "\r\n");
 
     FILE *films_txt = fopen("films.txt", "a");
     write_film(films_txt, film);
@@ -795,7 +786,7 @@ void admin_panel(Films *films, User *user) {
 }
 
 // Меню навигации для пользователя
-void navigation_menu(Films* films, User *user) {
+void navigation_menu(Films *films, User *user) {
     while (1) {
         printf("╔ %s, добро пожаловать в меню навигации. Перейдите в нужный вам раздел.\n", user->login);
         printf("╟ 1. Личный кабинет.\n");
